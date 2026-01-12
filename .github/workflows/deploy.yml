@@ -43,4 +43,4 @@ jobs:
           docker stop frontend || true
           docker rm frontend || true
           docker pull ${{ secrets.ECR_URI }}:latest
-          docker run -d --name frontend -p 80:80 ${{ secrets.ECR_URI }}:latest
+          docker run -d --name frontend -p 80:80 ${{ secrets.ECR_URI }}:latest  

@@ -2,17 +2,16 @@
 FROM node:18 AS build
 WORKDIR /app
 
-# 1. Copy only package files and install deps
+# Install dependencies
 COPY package*.json ./
 RUN npm install
 
-# 2. Copy source files and public folder
+# Copy source and public files
 COPY ./src ./src
 COPY ./public ./public
 COPY vite.config.js ./
-COPY index.html ./
 
-# 3. Build the app
+# Build React app
 RUN npm run build
 
 # Stage 2: Serve with Nginx

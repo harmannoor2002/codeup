@@ -7,12 +7,12 @@ COPY package*.json ./
 RUN npm install
 
 COPY src ./src
-COPY public ./public
+COPY index.html ./
 COPY vite.config.js ./
 
 RUN npm run build
 
-# Stage 2: Nginx
+# Stage 2: Serve with Nginx
 FROM nginx:alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html

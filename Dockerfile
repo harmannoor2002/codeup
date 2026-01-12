@@ -1,17 +1,15 @@
-# Stage 1: Build
+# Stage 1: Build React app
 FROM node:18 AS build
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json ./
 RUN npm install
 
-# Copy source and config
 COPY ./src ./src
 COPY ./public ./public
 COPY vite.config.js ./
+COPY index.html ./
 
-# Build the app
 RUN npm run build
 
 # Stage 2: Serve with Nginx

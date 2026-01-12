@@ -1,11 +1,10 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  root: "public",   // <-- tells Vite to use public/ as root
   plugins: [react()],
   build: {
-    outDir: "../dist", // output dist folder at project root
+    outDir: 'dist',
+    emptyOutDir: true, // ensures old files are removed
   },
-  base: "/",        // ensures correct paths
-});
+})

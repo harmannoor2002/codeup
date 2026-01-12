@@ -6,12 +6,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy source and public files
+# Copy source and config
 COPY ./src ./src
 COPY ./public ./public
 COPY vite.config.js ./
 
-# Build React app
+# Build the app
 RUN npm run build
 
 # Stage 2: Serve with Nginx

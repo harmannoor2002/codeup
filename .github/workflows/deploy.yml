@@ -4,35 +4,65 @@ on:
   push:
     branches: [ "main" ]
 
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: 203783636897.dkr.ecr.us-east-1.amazonaws.com/frontend-app
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # 1️⃣ Checkout
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials for GitHub Actions
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+    # 2️⃣ AWS creds
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Login to Amazon ECR
-      - name: Login to Amazon ECR
-        run: |
+    # 3️⃣ Login to ECR
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region $AWS_REGION \
+        | docker login --username AWS --password-stdin $ECR_REPO
+
+    # 4️⃣ Build image
+    - name: Build Docker image
+      run: |
+        docker build -t frontend-app .
+
+    # 5️⃣ Tag image
+    - name: Tag Docker image
+      run: |
+        docker tag frontend-app:latest $ECR_REPO:latest
+
+    # 6️⃣ PUSH image (❗ YEH MISSING THA)
+    - name: Push Docker image to ECR
+      run: |
+        docker push $ECR_REPO:latest
+
+    # 7️⃣ Deploy on EC2
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}      # EC2 Public IP
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
           aws ecr get-login-password --region us-east-1 \
           | docker login --username AWS --password-stdin 203783636897.dkr.ecr.us-east-1.amazonaws.com
 
-      # 4️⃣ Build Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t frontend-app .
+          docker stop frontend || true
+          docker rm frontend || true
 
-      # 5️⃣ Tag Docker image for ECR
-      - name: Tag Docker image
-        run: |
-          docker tag frontend-app:latest 203783636897.dkr.ecr.us-east-1.amaz
+          docker pull 203783636897.dkr.ecr.us-east-1.amazonaws.com/frontend-app:latest
+
+          docker run -d \
+            --name frontend \
+            -p 80:80 \
+            203783636897.dkr.ecr.us-east-1.amazonaws.com/frontend-app:latest

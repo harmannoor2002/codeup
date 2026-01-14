@@ -2,7 +2,7 @@ name: Deploy Frontend to EC2 via ECR
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   AWS_REGION: us-east-1
@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout
+    # 1️⃣ Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2️⃣ AWS creds
+    # 2️⃣ Configure AWS credentials (GitHub → ECR)
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -25,47 +25,74 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 3️⃣ Login to ECR
+    # 3️⃣ Login to Amazon ECR
     - name: Login to Amazon ECR
       run: |
         aws ecr get-login-password --region $AWS_REGION \
-        | docker login --username AWS --password-stdin $ECR_REPO
+        | docker login --username AWS --password-stdin 203783636897.dkr.ecr.us-east-1.amazonaws.com
 
-    # 4️⃣ Build image
+    # 4️⃣ Build Docker image
     - name: Build Docker image
       run: |
         docker build -t frontend-app .
 
-    # 5️⃣ Tag image
+    # 5️⃣ Tag Docker image
     - name: Tag Docker image
       run: |
         docker tag frontend-app:latest $ECR_REPO:latest
 
-    # 6️⃣ PUSH image (❗ YEH MISSING THA)
+    # 6️⃣ Push image to ECR
     - name: Push Docker image to ECR
       run: |
         docker push $ECR_REPO:latest
 
-    # 7️⃣ Deploy on EC2
+    # 7️⃣ 🚀 Auto-setup EC2 + Deploy
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.EC2_IP }}      # EC2 Public IP
+        host: ${{ secrets.EC2_IP }}
         username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }} 
+        key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
         timeout: 30s
         command_timeout: 10m
         script: |
+          set -e
+
+          echo "🔍 Checking Docker..."
+          if ! command -v docker &> /dev/null; then
+            echo "🐳 Installing Docker..."
+            sudo apt update -y
+            sudo apt install -y docker.io
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sudo usermod -aG docker ubuntu
+          else
+            echo "✅ Docker already installed"
+          fi
+
+          echo "🔍 Checking AWS CLI..."
+          if ! command -v aws &> /dev/null; then
+            echo "☁ Installing AWS CLI..."
+            sudo apt install unzip -y
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install
+          else
+            echo "✅ AWS CLI already installed"
+          fi
+
+          echo "🔑 Login to ECR from EC2"
           aws ecr get-login-password --region us-east-1 \
           | docker login --username AWS --password-stdin 203783636897.dkr.ecr.us-east-1.amazonaws.com
 
+          echo "♻ Restarting container"
           docker stop frontend || true
           docker rm frontend || true
 
-          docker pull 203783636897.dkr.ecr.us-east-1.amazonaws.com/frontend-app:latest
+          docker pull $ECR_REPO:latest
 
           docker run -d \
             --name frontend \
             -p 80:80 \
-            203783636897.dkr.ecr.us-east-1.amazonaws.com/frontend-app:latest
+            $ECR_REPO:latest

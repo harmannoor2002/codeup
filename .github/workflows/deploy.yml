@@ -52,7 +52,10 @@ jobs:
       with:
         host: ${{ secrets.EC2_HOST }}      # EC2 Public IP
         username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
+        key: ${{ secrets.EC2_SSH_KEY }} 
+        port: 22
+        timeout: 30s
+        command_timeout: 10m
         script: |
           aws ecr get-login-password --region us-east-1 \
           | docker login --username AWS --password-stdin 203783636897.dkr.ecr.us-east-1.amazonaws.com

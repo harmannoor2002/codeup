@@ -1,7 +1,7 @@
 function App() {
   return (
     <div className="container">
-      <h1>🚀 Auto Deployment Successful by me </h1>
+      <h1>🚀 Auto Deployment Successful</h1>
       <p>
         This React app is deployed automatically using:
       </p>
